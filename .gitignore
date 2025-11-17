@@ -3,3 +3,4 @@ sample/*/
 sample/*.spc
 sample/*.zip
 sample/*.txt
+.vscode/

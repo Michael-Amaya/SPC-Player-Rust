@@ -8,6 +8,7 @@ const VERIFICATION_BYTE: u8 = 26;
 const MINIMUM_PRINTABLE_CHAR:u8 = 0x20;
 const MAXIMUM_PRINTABLE_CHAR:u8 = 0x7E;
 
+#[allow(unused)]
 #[derive(Debug)]
 pub struct ExtendedID666Value {
     pub data_type: DataType,

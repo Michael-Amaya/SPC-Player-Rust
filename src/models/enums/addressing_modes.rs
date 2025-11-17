@@ -1,3 +1,4 @@
+#[allow(unused)]
 #[derive(Debug, Default, Clone, Copy)]
 pub enum AddressingModes {
     #[default]

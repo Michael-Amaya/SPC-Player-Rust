@@ -1,5 +1,6 @@
 use crate::models::enums::addressing_modes::AddressingModes;
 
+#[allow(unused)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Instruction {
     pub mnemonic: &'static str,

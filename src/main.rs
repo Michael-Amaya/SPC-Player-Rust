@@ -1,7 +1,7 @@
 mod models;
 
 use crate::models::spc_file::SPCFile;
-use crate::models::instructions::{Instruction};
+use crate::models::spc_processor::SPCProcessor;
 
 fn main() {
     let args = std::env::args().collect::<Vec<String>>();
@@ -12,12 +12,11 @@ fn main() {
     let file_contents = std::fs::read(&args[1]).unwrap();
 
     let spc_file = SPCFile::new(file_contents).unwrap();
-    let instructions = Instruction::build_instruction_array();
-
-    // println!("Hello, world: {:?}", spc_file);
-    println!("Created a SPC file!");
-    println!("Instruction list: {:?}", instructions);
+    let mut spc_processor = SPCProcessor::new(&spc_file);
     print_encoded_spc_header(&spc_file);
+    loop {
+        spc_processor.step();
+    }
 }
 
 fn print_encoded_spc_header(encoded_spc: &SPCFile) {

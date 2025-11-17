@@ -3,7 +3,7 @@ use crate::models::{enums::psw_flags::PSWFlags, instructions::Instruction, spc_f
 const SP_START: u16 = 0x0100;
 
 #[derive(Debug)]
-struct SPCProcessor {
+pub struct SPCProcessor {
     pub pc: u16,
     pub a: u8,
     pub x: u8,
@@ -15,26 +15,26 @@ struct SPCProcessor {
     pub dsp_registers: [u8; 128],
     pub cycles: u64, // Does it need to be this high?
 
-    instructions: [Instruction; 256]
+    instructions: [Instruction; 256],
 }
 
 impl SPCProcessor {
-    fn new(spc_file: &SPCFile) -> Self {
-        SPCProcessor { 
-            pc: u16::from_le_bytes(spc_file.pc), 
-            a: spc_file.a, 
-            x: spc_file.x, 
-            y: spc_file.y, 
-            psw: spc_file.psw, 
+    pub fn new(spc_file: &SPCFile) -> Self {
+        SPCProcessor {
+            pc: u16::from_le_bytes(spc_file.pc),
+            a: spc_file.a,
+            x: spc_file.x,
+            y: spc_file.y,
+            psw: spc_file.psw,
             sp: spc_file.sp,
-            ram_64kb: spc_file.ram_64kb, 
+            ram_64kb: spc_file.ram_64kb,
             dsp_registers: spc_file.dsp_registers,
             cycles: 0,
-            instructions: Instruction::build_instruction_array()
+            instructions: Instruction::build_instruction_array(),
         }
     }
 
-    fn step(&mut self) {
+    pub fn step(&mut self) {
         let opcode = self.read_ram(self.pc);
         self.pc += 1;
 
@@ -47,8 +47,8 @@ impl SPCProcessor {
         match opcode {
             0x00 => self.op_nop(),
             0x01 => self.op_tcall0(),
-            0x02 => self.op_set1(),
-            0x03 => {}
+            0x02 => self.op_set1(0),
+            0x03 => self.op_bbs(0),
             0x04 => {}
             0x05 => {}
             0x06 => {}
@@ -63,8 +63,8 @@ impl SPCProcessor {
             0x0F => {}
             0x10 => self.op_bpl_relative(),
             0x11 => {}
-            0x12 => {}
-            0x13 => {}
+            0x12 => self.op_clr1(0),
+            0x13 => self.op_bbc(0),
             0x14 => {}
             0x15 => {}
             0x16 => {}
@@ -79,8 +79,8 @@ impl SPCProcessor {
             0x1F => {}
             0x20 => self.op_clrp(),
             0x21 => {}
-            0x22 => {}
-            0x23 => {}
+            0x22 => self.op_set1(1),
+            0x23 => self.op_bbs(1),
             0x24 => {}
             0x25 => {}
             0x26 => {}
@@ -95,8 +95,8 @@ impl SPCProcessor {
             0x2F => {}
             0x30 => {}
             0x31 => {}
-            0x32 => {}
-            0x33 => {}
+            0x32 => self.op_clr1(1),
+            0x33 => self.op_bbc(1),
             0x34 => {}
             0x35 => {}
             0x36 => {}
@@ -111,8 +111,8 @@ impl SPCProcessor {
             0x3F => {}
             0x40 => {}
             0x41 => {}
-            0x42 => {}
-            0x43 => {}
+            0x42 => self.op_set1(2),
+            0x43 => self.op_bbs(2),
             0x44 => {}
             0x45 => {}
             0x46 => {}
@@ -127,8 +127,8 @@ impl SPCProcessor {
             0x4F => {}
             0x50 => {}
             0x51 => {}
-            0x52 => {}
-            0x53 => {}
+            0x52 => self.op_clr1(2),
+            0x53 => self.op_bbc(2),
             0x54 => {}
             0x55 => {}
             0x56 => {}
@@ -143,8 +143,8 @@ impl SPCProcessor {
             0x5F => {}
             0x60 => {}
             0x61 => {}
-            0x62 => {}
-            0x63 => {}
+            0x62 => self.op_set1(3),
+            0x63 => self.op_bbs(3),
             0x64 => {}
             0x65 => {}
             0x66 => {}
@@ -159,8 +159,8 @@ impl SPCProcessor {
             0x6F => {}
             0x70 => {}
             0x71 => {}
-            0x72 => {}
-            0x73 => {}
+            0x72 => self.op_clr1(3),
+            0x73 => self.op_bbc(3),
             0x74 => {}
             0x75 => {}
             0x76 => {}
@@ -175,8 +175,8 @@ impl SPCProcessor {
             0x7F => {}
             0x80 => {}
             0x81 => {}
-            0x82 => {}
-            0x83 => {}
+            0x82 => self.op_set1(4),
+            0x83 => self.op_bbs(4),
             0x84 => {}
             0x85 => {}
             0x86 => {}
@@ -191,8 +191,8 @@ impl SPCProcessor {
             0x8F => {}
             0x90 => {}
             0x91 => {}
-            0x92 => {}
-            0x93 => {}
+            0x92 => self.op_clr1(4),
+            0x93 => self.op_bbc(4),
             0x94 => {}
             0x95 => {}
             0x96 => {}
@@ -207,8 +207,8 @@ impl SPCProcessor {
             0x9F => {}
             0xA0 => {}
             0xA1 => {}
-            0xA2 => {}
-            0xA3 => {}
+            0xA2 => self.op_set1(5),
+            0xA3 => self.op_bbs(5),
             0xA4 => {}
             0xA5 => {}
             0xA6 => {}
@@ -223,8 +223,8 @@ impl SPCProcessor {
             0xAF => {}
             0xB0 => {}
             0xB1 => {}
-            0xB2 => {}
-            0xB3 => {}
+            0xB2 => self.op_clr1(5),
+            0xB3 => self.op_bbc(5),
             0xB4 => {}
             0xB5 => {}
             0xB6 => {}
@@ -239,8 +239,8 @@ impl SPCProcessor {
             0xBF => {}
             0xC0 => {}
             0xC1 => {}
-            0xC2 => {}
-            0xC3 => {}
+            0xC2 => self.op_set1(6),
+            0xC3 => self.op_bbs(6),
             0xC4 => {}
             0xC5 => {}
             0xC6 => {}
@@ -255,8 +255,8 @@ impl SPCProcessor {
             0xCF => {}
             0xD0 => {}
             0xD1 => {}
-            0xD2 => {}
-            0xD3 => {}
+            0xD2 => self.op_clr1(6),
+            0xD3 => self.op_bbc(6),
             0xD4 => {}
             0xD5 => {}
             0xD6 => {}
@@ -271,8 +271,8 @@ impl SPCProcessor {
             0xDF => {}
             0xE0 => {}
             0xE1 => {}
-            0xE2 => {}
-            0xE3 => {}
+            0xE2 => self.op_set1(7),
+            0xE3 => self.op_bbs(7),
             0xE4 => {}
             0xE5 => {}
             0xE6 => {}
@@ -287,8 +287,8 @@ impl SPCProcessor {
             0xEF => {}
             0xF0 => {}
             0xF1 => {}
-            0xF2 => {}
-            0xF3 => {}
+            0xF2 => self.op_clr1(7),
+            0xF3 => self.op_bbc(7),
             0xF4 => {}
             0xF5 => {}
             0xF6 => {}
@@ -301,7 +301,7 @@ impl SPCProcessor {
             0xFD => {}
             0xFE => {}
             0xFF => {}
-        }       
+        }
     }
 
     // CPU Operational Functions
@@ -343,15 +343,106 @@ impl SPCProcessor {
         let pc_bytes = u16::to_le_bytes(self.pc);
         self.write_stack(pc_bytes[1]);
         self.write_stack(pc_bytes[0]);
-        
+
         let to_jump = u16::from_le_bytes([self.read_ram(0xFFDE), self.read_ram(0xFFDF)]);
         self.pc = to_jump;
         self.cycles += 8;
     }
 
-    // 0x02
-    fn op_set1(&mut self) {
-        
+    // 0x02, 0x22, 0x42, 0x62, 0x82, 0xA2, 0xC2, 0xE2
+    fn op_set1(&mut self, position: u8) {
+        assert!(position < 8);
+
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = base_addr + (offset as u16);
+        let old_value = self.read_ram(addr);
+        let new_value = old_value | (1 << position);
+        self.write_ram(addr, new_value);
+
+        self.cycles += 4;
+    }
+
+    // 0x03, 0x23, 0x43, 0x63, 0x83, 0xA3, 0xC3, 0xE3
+    fn op_bbs(&mut self, position: u8) {
+        assert!(position < 8);
+
+        let dp_offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let relative_offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = base_addr + (dp_offset as u16);
+        let value = self.read_ram(addr);
+        if (value & (1 << position)) != 0 {
+            let relative_offset_i8 = relative_offset as i8;
+            let relative_offset_i16 = relative_offset_i8 as i16;
+            self.pc = self.pc.wrapping_add_signed(relative_offset_i16);
+            self.cycles += 7;
+        } else {
+            self.cycles += 5;
+        }
+    }
+
+    // 0x12, 0x32, 0x52, 0x72, 0x92, 0xB2, 0xD2, 0xF2
+    fn op_clr1(&mut self, position: u8) {
+        assert!(position < 8);
+
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = base_addr + (offset as u16);
+        let old_value = self.read_ram(addr);
+        let new_value = old_value & !(1 << position);
+        self.write_ram(addr, new_value);
+
+        self.cycles += 4;
+    }
+
+    // 0x13, 0x33, 0x53, 0x73, 0x93, 0xB3, 0xD3, 0xF3
+    fn op_bbc(&mut self, position: u8) {
+        assert!(position < 8);
+
+        let dp_offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let relative_offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = base_addr + (dp_offset as u16);
+        let value = self.read_ram(addr);
+        if (value & (1 << position)) == 0 {
+            let relative_offset_i8 = relative_offset as i8;
+            let relative_offset_i16 = relative_offset_i8 as i16;
+            self.pc = self.pc.wrapping_add_signed(relative_offset_i16);
+            self.cycles += 7;
+        } else {
+            self.cycles += 5;
+        }
     }
 
     // 0x10
