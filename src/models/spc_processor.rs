@@ -46,15 +46,15 @@ impl SPCProcessor {
         println!("Executing instruction: {:?}", instruction);
         match opcode {
             0x00 => self.op_nop(),
-            0x01 => self.op_tcall0(),
+            0x01 => self.op_tcall(0xFFDE),
             0x02 => self.op_set1(0),
-            0x03 => self.op_bbs(0),
-            0x04 => {}
-            0x05 => {}
-            0x06 => {}
-            0x07 => {}
-            0x08 => {}
-            0x09 => {}
+            0x03 => self.op_bbs_direct_page(0),
+            0x04 => self.op_or_direct_page(),
+            0x05 => self.op_or_absolute(),
+            0x06 => self.op_or_indirect(),
+            0x07 => self.op_or_x_indexed_indirect(),
+            0x08 => self.op_or_immediate(),
+            0x09 => self.op_or_dp_dp(), // TODO: Make sure this works properly..
             0x0A => {}
             0x0B => {}
             0x0C => {}
@@ -62,13 +62,13 @@ impl SPCProcessor {
             0x0E => {}
             0x0F => {}
             0x10 => self.op_bpl_relative(),
-            0x11 => {}
+            0x11 => self.op_tcall(0xFFDC),
             0x12 => self.op_clr1(0),
-            0x13 => self.op_bbc(0),
-            0x14 => {}
-            0x15 => {}
-            0x16 => {}
-            0x17 => {}
+            0x13 => self.op_bbc_direct_page(0),
+            0x14 => self.op_or_x_indexed_direct(),
+            0x15 => self.op_or_x_indexed_absolute(),
+            0x16 => self.op_or_y_indexed_absolute(),
+            0x17 => self.op_or_indirect_y_indexed(),
             0x18 => {}
             0x19 => {}
             0x1A => {}
@@ -78,9 +78,9 @@ impl SPCProcessor {
             0x1E => {}
             0x1F => {}
             0x20 => self.op_clrp(),
-            0x21 => {}
+            0x21 => self.op_tcall(0xFFDA),
             0x22 => self.op_set1(1),
-            0x23 => self.op_bbs(1),
+            0x23 => self.op_bbs_direct_page(1),
             0x24 => {}
             0x25 => {}
             0x26 => {}
@@ -93,10 +93,10 @@ impl SPCProcessor {
             0x2D => {}
             0x2E => {}
             0x2F => {}
-            0x30 => {}
-            0x31 => {}
+            0x30 => self.op_bmi_relative(),
+            0x31 => self.op_tcall(0xFFD8),
             0x32 => self.op_clr1(1),
-            0x33 => self.op_bbc(1),
+            0x33 => self.op_bbc_direct_page(1),
             0x34 => {}
             0x35 => {}
             0x36 => {}
@@ -109,10 +109,10 @@ impl SPCProcessor {
             0x3D => {}
             0x3E => {}
             0x3F => {}
-            0x40 => {}
-            0x41 => {}
+            0x40 => self.op_setp(),
+            0x41 => self.op_tcall(0xFFD6),
             0x42 => self.op_set1(2),
-            0x43 => self.op_bbs(2),
+            0x43 => self.op_bbs_direct_page(2),
             0x44 => {}
             0x45 => {}
             0x46 => {}
@@ -125,10 +125,10 @@ impl SPCProcessor {
             0x4D => {}
             0x4E => {}
             0x4F => {}
-            0x50 => {}
-            0x51 => {}
+            0x50 => self.op_bvc_relative(),
+            0x51 => self.op_tcall(0xFFD4),
             0x52 => self.op_clr1(2),
-            0x53 => self.op_bbc(2),
+            0x53 => self.op_bbc_direct_page(2),
             0x54 => {}
             0x55 => {}
             0x56 => {}
@@ -141,10 +141,10 @@ impl SPCProcessor {
             0x5D => {}
             0x5E => {}
             0x5F => {}
-            0x60 => {}
-            0x61 => {}
+            0x60 => self.op_clrc(),
+            0x61 => self.op_tcall(0xFFD2),
             0x62 => self.op_set1(3),
-            0x63 => self.op_bbs(3),
+            0x63 => self.op_bbs_direct_page(3),
             0x64 => {}
             0x65 => {}
             0x66 => {}
@@ -157,10 +157,10 @@ impl SPCProcessor {
             0x6D => {}
             0x6E => {}
             0x6F => {}
-            0x70 => {}
-            0x71 => {}
+            0x70 => self.op_bvs_relative(),
+            0x71 => self.op_tcall(0xFFD0),
             0x72 => self.op_clr1(3),
-            0x73 => self.op_bbc(3),
+            0x73 => self.op_bbc_direct_page(3),
             0x74 => {}
             0x75 => {}
             0x76 => {}
@@ -173,10 +173,10 @@ impl SPCProcessor {
             0x7D => {}
             0x7E => {}
             0x7F => {}
-            0x80 => {}
-            0x81 => {}
+            0x80 => self.op_setc(),
+            0x81 => self.op_tcall(0xFFCE),
             0x82 => self.op_set1(4),
-            0x83 => self.op_bbs(4),
+            0x83 => self.op_bbs_direct_page(4),
             0x84 => {}
             0x85 => {}
             0x86 => {}
@@ -189,10 +189,10 @@ impl SPCProcessor {
             0x8D => {}
             0x8E => {}
             0x8F => {}
-            0x90 => {}
-            0x91 => {}
+            0x90 => self.op_bcc_relative(),
+            0x91 => self.op_tcall(0xFFCC),
             0x92 => self.op_clr1(4),
-            0x93 => self.op_bbc(4),
+            0x93 => self.op_bbc_direct_page(4),
             0x94 => {}
             0x95 => {}
             0x96 => {}
@@ -205,10 +205,10 @@ impl SPCProcessor {
             0x9D => {}
             0x9E => {}
             0x9F => {}
-            0xA0 => {}
-            0xA1 => {}
+            0xA0 => self.op_ei(),
+            0xA1 => self.op_tcall(0xFFCA),
             0xA2 => self.op_set1(5),
-            0xA3 => self.op_bbs(5),
+            0xA3 => self.op_bbs_direct_page(5),
             0xA4 => {}
             0xA5 => {}
             0xA6 => {}
@@ -221,10 +221,10 @@ impl SPCProcessor {
             0xAD => {}
             0xAE => {}
             0xAF => {}
-            0xB0 => {}
-            0xB1 => {}
+            0xB0 => self.op_bcs_relative(),
+            0xB1 => self.op_tcall(0xFFC8),
             0xB2 => self.op_clr1(5),
-            0xB3 => self.op_bbc(5),
+            0xB3 => self.op_bbc_direct_page(5),
             0xB4 => {}
             0xB5 => {}
             0xB6 => {}
@@ -237,10 +237,10 @@ impl SPCProcessor {
             0xBD => {}
             0xBE => {}
             0xBF => {}
-            0xC0 => {}
-            0xC1 => {}
+            0xC0 => self.op_di(),
+            0xC1 => self.op_tcall(0xFFC6),
             0xC2 => self.op_set1(6),
-            0xC3 => self.op_bbs(6),
+            0xC3 => self.op_bbs_direct_page(6),
             0xC4 => {}
             0xC5 => {}
             0xC6 => {}
@@ -253,10 +253,10 @@ impl SPCProcessor {
             0xCD => {}
             0xCE => {}
             0xCF => {}
-            0xD0 => {}
-            0xD1 => {}
+            0xD0 => self.op_bne_relative(),
+            0xD1 => self.op_tcall(0xFFC4),
             0xD2 => self.op_clr1(6),
-            0xD3 => self.op_bbc(6),
+            0xD3 => self.op_bbc_direct_page(6),
             0xD4 => {}
             0xD5 => {}
             0xD6 => {}
@@ -269,10 +269,10 @@ impl SPCProcessor {
             0xDD => {}
             0xDE => {}
             0xDF => {}
-            0xE0 => {}
-            0xE1 => {}
+            0xE0 => self.op_clrv(),
+            0xE1 => self.op_tcall(0xFFC2),
             0xE2 => self.op_set1(7),
-            0xE3 => self.op_bbs(7),
+            0xE3 => self.op_bbs_direct_page(7),
             0xE4 => {}
             0xE5 => {}
             0xE6 => {}
@@ -285,10 +285,10 @@ impl SPCProcessor {
             0xED => {}
             0xEE => {}
             0xEF => {}
-            0xF0 => {}
-            0xF1 => {}
+            0xF0 => self.op_beq_relative(),
+            0xF1 => self.op_tcall(0xFFC0),
             0xF2 => self.op_clr1(7),
-            0xF3 => self.op_bbc(7),
+            0xF3 => self.op_bbc_direct_page(7),
             0xF4 => {}
             0xF5 => {}
             0xF6 => {}
@@ -332,19 +332,33 @@ impl SPCProcessor {
         self.psw &= !(flag as u8);
     }
 
+    fn update_nz(&mut self, value: u8) {
+        if value & 0b1000_0000 != 0 {
+            self.set_flag(PSWFlags::Negative);
+        } else {
+            self.clear_flag(PSWFlags::Negative);
+        }
+
+        if value == 0 {
+            self.set_flag(PSWFlags::Zero);
+        } else {
+            self.clear_flag(PSWFlags::Zero);
+        }
+    }
+
     // CPU Opcodes
     // 0x00
     fn op_nop(&mut self) {
         self.cycles += 2;
     }
 
-    // 0x01
-    fn op_tcall0(&mut self) {
+    // 0x01, 0x11, 0x21, 0x31, 0x41, 0x51, 0x61, 0x71, 0x81, 0x91, 0xA1, 0xB1, 0xC1, 0xD1, 0xE1, 0xF1
+    fn op_tcall(&mut self, address: u16) {
         let pc_bytes = u16::to_le_bytes(self.pc);
         self.write_stack(pc_bytes[1]);
         self.write_stack(pc_bytes[0]);
 
-        let to_jump = u16::from_le_bytes([self.read_ram(0xFFDE), self.read_ram(0xFFDF)]);
+        let to_jump = u16::from_le_bytes([self.read_ram(address), self.read_ram(address + 1)]);
         self.pc = to_jump;
         self.cycles += 8;
     }
@@ -371,7 +385,7 @@ impl SPCProcessor {
     }
 
     // 0x03, 0x23, 0x43, 0x63, 0x83, 0xA3, 0xC3, 0xE3
-    fn op_bbs(&mut self, position: u8) {
+    fn op_bbs_direct_page(&mut self, position: u8) {
         assert!(position < 8);
 
         let dp_offset = self.read_ram(self.pc);
@@ -397,6 +411,123 @@ impl SPCProcessor {
         }
     }
 
+    // 0x04
+    fn op_or_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100 + offset as u16
+        } else {
+            0x0000 + offset as u16
+        };
+        
+        let old_value = self.read_ram(addr);
+        let new_value = old_value | self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+
+        self.cycles += 3;
+    }
+
+    // 0x05
+    fn op_or_absolute(&mut self) {
+        let addr_low = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr_high = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = u16::from_le_bytes([addr_low, addr_high]);
+
+        let old_value = self.read_ram(addr);
+        let new_value = old_value | self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 4;
+    }
+
+    // 0x06
+    fn op_or_indirect(&mut self) {
+        let addr = self.x as u16;
+
+        let old_value = self.read_ram(addr);
+        let new_value = old_value | self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 3;
+    }
+
+    // 0x07
+    fn op_or_x_indexed_indirect(&mut self) { 
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        // Dumb pointer logic zzzzzzzzzzzzzz
+        let pointer_addr = self.x.wrapping_add(offset);
+        let final_addr_low = self.read_ram(pointer_addr as u16);
+        let final_addr_high = self.read_ram(pointer_addr.wrapping_add(1) as u16);
+        let final_addr = u16::from_le_bytes([final_addr_low, final_addr_high]);
+
+        let old_value = self.read_ram(final_addr);
+        let new_value = old_value | self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 6;
+    }
+
+    // 0x08
+    fn op_or_immediate(&mut self) {
+        let value = self.read_ram(self.pc);
+        self.pc += 1;
+        let new_value = self.a | value;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 2;
+    }
+
+    // 0x09
+    fn op_or_dp_dp(&mut self) {
+        let ds_offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let dd_offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let source_addr = base_addr + (ds_offset as u16);
+        let dest_addr = base_addr + (dd_offset as u16);
+
+        let old_value = self.read_ram(dest_addr);
+        let new_value = old_value | self.read_ram(source_addr);
+        self.write_ram(dest_addr, new_value);
+        
+        self.update_nz(new_value);
+        self.cycles += 6;
+    }
+
+    // 0x10
+    fn op_bpl_relative(&mut self) {
+        let offset_u8 = self.read_ram(self.pc);
+        self.pc += 1;
+
+        if !self.flag_set(PSWFlags::Negative) {
+            let offset_i8 = offset_u8 as i8;
+            let offset_i16 = offset_i8 as i16;
+            let new_pc = self.pc.wrapping_add(offset_i16 as u16);
+            self.pc = new_pc;
+            self.cycles += 4;
+        } else {
+            self.cycles += 2;
+        }
+    }
+
     // 0x12, 0x32, 0x52, 0x72, 0x92, 0xB2, 0xD2, 0xF2
     fn op_clr1(&mut self, position: u8) {
         assert!(position < 8);
@@ -419,7 +550,7 @@ impl SPCProcessor {
     }
 
     // 0x13, 0x33, 0x53, 0x73, 0x93, 0xB3, 0xD3, 0xF3
-    fn op_bbc(&mut self, position: u8) {
+    fn op_bbc_direct_page(&mut self, position: u8) {
         assert!(position < 8);
 
         let dp_offset = self.read_ram(self.pc);
@@ -445,12 +576,92 @@ impl SPCProcessor {
         }
     }
 
-    // 0x10
-    fn op_bpl_relative(&mut self) {
+    // 0x14
+    fn op_or_x_indexed_direct(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = self.x.wrapping_add(offset as u8) as u16 + base_addr;
+        let old_value = self.read_ram(addr as u16);
+        let new_value = old_value | self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 4;
+    }
+
+    // 0x15
+    fn op_or_x_indexed_absolute(&mut self) {
+        let low_addr = self.read_ram(self.pc);
+        self.pc += 1;
+        let high_addr = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = u16::from_le_bytes([low_addr, high_addr]);
+
+        let addr =base_addr.wrapping_add(self.x as u16);
+        let old_value = self.read_ram(addr);
+        let new_value = old_value | self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 5;
+    }
+
+    // 0x16
+    fn op_or_y_indexed_absolute(&mut self) {
+        let low_addr = self.read_ram(self.pc);
+        self.pc += 1;
+        let high_addr = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = u16::from_le_bytes([low_addr, high_addr]);
+
+        let addr =base_addr.wrapping_add(self.y as u16);
+        let old_value = self.read_ram(addr);
+        let new_value = old_value | self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 5;
+    }
+
+    // 0x17
+    fn op_or_indirect_y_indexed(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let pointer_addr = offset as u16;
+        let base_addr_low = self.read_ram(pointer_addr);
+        let base_addr_high = self.read_ram(pointer_addr.wrapping_add(1));
+        let base_addr = u16::from_le_bytes([base_addr_low, base_addr_high]);
+        let final_addr = base_addr.wrapping_add(self.y as u16);
+
+        let old_value = self.read_ram(final_addr);
+        let new_value = old_value | self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 6;
+    }
+
+    // 0x20
+    fn op_clrp(&mut self) {
+        self.clear_flag(PSWFlags::DirectPage);
+        self.cycles += 2;
+    }
+
+    // 0x30
+    fn op_bmi_relative(&mut self) {
         let offset_u8 = self.read_ram(self.pc);
         self.pc += 1;
 
-        if !self.flag_set(PSWFlags::Negative) {
+        if self.flag_set(PSWFlags::Negative) {
             let offset_i8 = offset_u8 as i8;
             let offset_i16 = offset_i8 as i16;
             let new_pc = self.pc.wrapping_add(offset_i16 as u16);
@@ -461,9 +672,136 @@ impl SPCProcessor {
         }
     }
 
-    // 0x20
-    fn op_clrp(&mut self) {
-        self.clear_flag(PSWFlags::DirectPage);
+    // 0x40
+    fn op_setp(&mut self) {
+        self.set_flag(PSWFlags::DirectPage);
         self.cycles += 2;
+    }
+
+    // 0x50
+    fn op_bvc_relative(&mut self) {
+        let offset_u8 = self.read_ram(self.pc);
+        self.pc += 1;
+
+        if !self.flag_set(PSWFlags::Overflow) {
+            let offset_i8 = offset_u8 as i8;
+            let offset_i16 = offset_i8 as i16;
+            let new_pc = self.pc.wrapping_add(offset_i16 as u16);
+            self.pc = new_pc;
+            self.cycles += 4;
+        } else {
+            self.cycles += 2;
+        }
+    }
+
+    // 0x60
+    fn op_clrc(&mut self) {
+        self.clear_flag(PSWFlags::Carry);
+        self.cycles += 2;
+    }
+
+    // 0x70
+    fn op_bvs_relative(&mut self) {
+        let offset_u8 = self.read_ram(self.pc);
+        self.pc += 1;
+
+        if self.flag_set(PSWFlags::Overflow) {
+            let offset_i8 = offset_u8 as i8;
+            let offset_i16 = offset_i8 as i16;
+            let new_pc = self.pc.wrapping_add(offset_i16 as u16);
+            self.pc = new_pc;
+            self.cycles += 4;
+        } else {
+            self.cycles += 2;
+        }
+    }
+
+    // 0x80
+    fn op_setc(&mut self) {
+        self.set_flag(PSWFlags::Carry);
+        self.cycles += 2;
+    }
+
+    // 0x90
+    fn op_bcc_relative(&mut self) {
+        let offset_u8 = self.read_ram(self.pc);
+        self.pc += 1;
+
+        if !self.flag_set(PSWFlags::Carry) {
+            let offset_i8 = offset_u8 as i8;
+            let offset_i16 = offset_i8 as i16;
+            let new_pc = self.pc.wrapping_add(offset_i16 as u16);
+            self.pc = new_pc;
+            self.cycles += 4;
+        } else {
+            self.cycles += 2;
+        }
+    }
+
+    // 0xA0
+    fn op_ei(&mut self) {
+        self.set_flag(PSWFlags::InterruptEnabled);
+        self.cycles += 3;
+    }
+
+    // 0xB0
+    fn op_bcs_relative(&mut self) {
+        let offset_u8 = self.read_ram(self.pc);
+        self.pc += 1;
+
+        if self.flag_set(PSWFlags::Carry) {
+            let offset_i8 = offset_u8 as i8;
+            let offset_i16 = offset_i8 as i16;
+            let new_pc = self.pc.wrapping_add(offset_i16 as u16);
+            self.pc = new_pc;
+            self.cycles += 4;
+        } else {
+            self.cycles += 2;
+        }
+    }
+
+    // 0xC0
+    fn op_di(&mut self) {
+        self.clear_flag(PSWFlags::InterruptEnabled);
+        self.cycles += 3;
+    }
+
+    // 0xD0
+    fn op_bne_relative(&mut self) {
+        let offset_u8 = self.read_ram(self.pc);
+        self.pc += 1;
+
+        if !self.flag_set(PSWFlags::Zero) {
+            let offset_i8 = offset_u8 as i8;
+            let offset_i16 = offset_i8 as i16;
+            let new_pc = self.pc.wrapping_add(offset_i16 as u16);
+            self.pc = new_pc;
+            self.cycles += 4;
+        } else {
+            self.cycles += 2;
+        }
+    }
+
+    // 0xE0
+    fn op_clrv(&mut self) {
+        self.clear_flag(PSWFlags::Overflow);
+        self.clear_flag(PSWFlags::HalfCarry);
+        self.cycles += 2;
+    }
+
+    // 0xF0
+    fn op_beq_relative(&mut self) {
+        let offset_u8 = self.read_ram(self.pc);
+        self.pc += 1;
+
+        if self.flag_set(PSWFlags::Zero) {
+            let offset_i8 = offset_u8 as i8;
+            let offset_i16 = offset_i8 as i16;
+            let new_pc = self.pc.wrapping_add(offset_i16 as u16);
+            self.pc = new_pc;
+            self.cycles += 4;
+        } else {
+            self.cycles += 2;
+        }
     }
 }
