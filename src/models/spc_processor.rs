@@ -69,8 +69,8 @@ impl SPCProcessor {
             0x15 => self.op_or_x_indexed_absolute(),
             0x16 => self.op_or_y_indexed_absolute(),
             0x17 => self.op_or_indirect_y_indexed(),
-            0x18 => {}
-            0x19 => {}
+            0x18 => self.op_or_immediate_to_direct_page(),
+            0x19 => self.op_or_indirect_to_indirect(),
             0x1A => {}
             0x1B => {}
             0x1C => {}
@@ -81,12 +81,12 @@ impl SPCProcessor {
             0x21 => self.op_tcall(0xFFDA),
             0x22 => self.op_set1(1),
             0x23 => self.op_bbs_direct_page(1),
-            0x24 => {}
-            0x25 => {}
-            0x26 => {}
-            0x27 => {}
-            0x28 => {}
-            0x29 => {}
+            0x24 => self.op_and_direct_page(),
+            0x25 => self.op_and_absolute(),
+            0x26 => self.op_and_indirect(),
+            0x27 => self.op_and_x_indexed_indirect(),
+            0x28 => self.op_and_immediate(),
+            0x29 => self.op_and_dp_dp(),
             0x2A => {}
             0x2B => {}
             0x2C => {}
@@ -97,12 +97,12 @@ impl SPCProcessor {
             0x31 => self.op_tcall(0xFFD8),
             0x32 => self.op_clr1(1),
             0x33 => self.op_bbc_direct_page(1),
-            0x34 => {}
-            0x35 => {}
-            0x36 => {}
-            0x37 => {}
-            0x38 => {}
-            0x39 => {}
+            0x34 => self.op_and_x_indexed_direct(),
+            0x35 => self.op_and_x_indexed_absolute(),
+            0x36 => self.op_and_y_indexed_absolute(),
+            0x37 => self.op_and_indirect_y_indexed(),
+            0x38 => self.op_and_immediate_to_direct_page(),
+            0x39 => self.op_and_indirect_to_indirect(),
             0x3A => {}
             0x3B => {}
             0x3C => {}
@@ -113,12 +113,12 @@ impl SPCProcessor {
             0x41 => self.op_tcall(0xFFD6),
             0x42 => self.op_set1(2),
             0x43 => self.op_bbs_direct_page(2),
-            0x44 => {}
-            0x45 => {}
-            0x46 => {}
-            0x47 => {}
-            0x48 => {}
-            0x49 => {}
+            0x44 => self.op_eor_direct_page(),
+            0x45 => self.op_eor_absolute(),
+            0x46 => self.op_eor_indirect(),
+            0x47 => self.op_eor_x_indexed_indirect(),
+            0x48 => self.op_eor_immediate(),
+            0x49 => self.op_eor_dp_dp(),
             0x4A => {}
             0x4B => {}
             0x4C => {}
@@ -129,12 +129,12 @@ impl SPCProcessor {
             0x51 => self.op_tcall(0xFFD4),
             0x52 => self.op_clr1(2),
             0x53 => self.op_bbc_direct_page(2),
-            0x54 => {}
-            0x55 => {}
-            0x56 => {}
-            0x57 => {}
-            0x58 => {}
-            0x59 => {}
+            0x54 => self.op_eor_x_indexed_direct(),
+            0x55 => self.op_eor_x_indexed_absolute(),
+            0x56 => self.op_eor_y_indexed_absolute(),
+            0x57 => self.op_eor_indirect_y_indexed(),
+            0x58 => self.op_eor_immediate_to_direct_page(),
+            0x59 => self.op_eor_indirect_to_indirect(),
             0x5A => {}
             0x5B => {}
             0x5C => {}
@@ -145,12 +145,12 @@ impl SPCProcessor {
             0x61 => self.op_tcall(0xFFD2),
             0x62 => self.op_set1(3),
             0x63 => self.op_bbs_direct_page(3),
-            0x64 => {}
-            0x65 => {}
-            0x66 => {}
-            0x67 => {}
-            0x68 => {}
-            0x69 => {}
+            0x64 => self.op_cmp_direct_page(),
+            0x65 => self.op_cmp_absolute(),
+            0x66 => self.op_cmp_indirect(),
+            0x67 => self.op_cmp_x_indexed_indirect(),
+            0x68 => self.op_cmp_immediate(),
+            0x69 => self.op_cmp_dp_dp(),
             0x6A => {}
             0x6B => {}
             0x6C => {}
@@ -161,12 +161,12 @@ impl SPCProcessor {
             0x71 => self.op_tcall(0xFFD0),
             0x72 => self.op_clr1(3),
             0x73 => self.op_bbc_direct_page(3),
-            0x74 => {}
-            0x75 => {}
-            0x76 => {}
-            0x77 => {}
-            0x78 => {}
-            0x79 => {}
+            0x74 => self.op_cmp_x_indexed_direct(),
+            0x75 => self.op_cmp_x_indexed_absolute(),
+            0x76 => self.op_cmp_y_indexed_absolute(),
+            0x77 => self.op_cmp_indirect_y_indexed(),
+            0x78 => self.op_cmp_immediate_to_direct_page(),
+            0x79 => self.op_cmp_indirect_to_indirect(),
             0x7A => {}
             0x7B => {}
             0x7C => {}
@@ -177,12 +177,12 @@ impl SPCProcessor {
             0x81 => self.op_tcall(0xFFCE),
             0x82 => self.op_set1(4),
             0x83 => self.op_bbs_direct_page(4),
-            0x84 => {}
-            0x85 => {}
-            0x86 => {}
-            0x87 => {}
-            0x88 => {}
-            0x89 => {}
+            0x84 => self.op_adc_direct_page(),
+            0x85 => self.op_adc_absolute(),
+            0x86 => self.op_adc_indirect(),
+            0x87 => self.op_adc_x_indexed_indirect(),
+            0x88 => self.op_adc_immediate(),
+            0x89 => self.op_abc_dp_dp(),
             0x8A => {}
             0x8B => {}
             0x8C => {}
@@ -193,11 +193,11 @@ impl SPCProcessor {
             0x91 => self.op_tcall(0xFFCC),
             0x92 => self.op_clr1(4),
             0x93 => self.op_bbc_direct_page(4),
-            0x94 => {}
-            0x95 => {}
-            0x96 => {}
-            0x97 => {}
-            0x98 => {}
+            0x94 => self.op_adc_x_indexed_direct(),
+            0x95 => self.op_adc_x_indexed_absolute(),
+            0x96 => self.op_adc_y_indexed_absolute(),
+            0x97 => self.op_adc_indirect_y_indexed(),
+            0x98 => self.op_adc_immediate_to_direct_page(),
             0x99 => {}
             0x9A => {}
             0x9B => {}
@@ -343,6 +343,30 @@ impl SPCProcessor {
             self.set_flag(PSWFlags::Zero);
         } else {
             self.clear_flag(PSWFlags::Zero);
+        }
+    }
+
+    fn update_carry(&mut self, did_borrow: bool) {
+        if did_borrow {
+            self.clear_flag(PSWFlags::Carry);
+        } else {
+            self.set_flag(PSWFlags::Carry);
+        }
+    }
+
+    fn update_overflow(&mut self, to_check: bool) {
+        if to_check {
+            self.set_flag(PSWFlags::Overflow);
+        } else {
+            self.clear_flag(PSWFlags::Overflow);
+        }
+    }
+
+    fn update_half_carry(&mut self, to_check: bool) {
+        if to_check {
+            self.set_flag(PSWFlags::HalfCarry);
+        } else {
+            self.clear_flag(PSWFlags::HalfCarry);
         }
     }
 
@@ -650,10 +674,145 @@ impl SPCProcessor {
         self.cycles += 6;
     }
 
+    // 0x18
+    fn op_or_immediate_to_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let to_or = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = base_addr + offset as u16;
+        let old_value = self.read_ram(addr);
+        let value = old_value | to_or;
+        self.write_ram(addr, value);
+        
+        self.update_nz(value);
+        self.cycles += 5;
+    }
+
+    // 0x19
+    fn op_or_indirect_to_indirect(&mut self) {
+        let first_value = self.read_ram(self.x as u16);
+        let second_value = self.read_ram(self.y as u16);
+
+        let new_value = first_value | second_value;
+        self.write_ram(self.x as u16, new_value);
+
+        self.update_nz(new_value);
+        self.cycles += 5; 
+    }
+
     // 0x20
     fn op_clrp(&mut self) {
         self.clear_flag(PSWFlags::DirectPage);
         self.cycles += 2;
+    }
+
+    // 0x24
+    fn op_and_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100 + offset as u16
+        } else {
+            0x0000 + offset as u16
+        };
+        
+        let old_value = self.read_ram(addr);
+        let new_value = old_value & self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+
+        self.cycles += 3;
+    }
+
+    // 0x25
+    fn op_and_absolute(&mut self) {
+        let addr_low = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr_high = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = u16::from_le_bytes([addr_low, addr_high]);
+
+        let old_value = self.read_ram(addr);
+        let new_value = old_value & self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 4;
+    }
+
+    // 0x26
+    fn op_and_indirect(&mut self) {
+        let addr = self.x as u16;
+
+        let old_value = self.read_ram(addr);
+        let new_value = old_value & self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 3;
+    }
+
+    // 0x27
+    fn op_and_x_indexed_indirect(&mut self) { 
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        // Dumb pointer logic zzzzzzzzzzzzzz
+        let pointer_addr = self.x.wrapping_add(offset);
+        let final_addr_low = self.read_ram(pointer_addr as u16);
+        let final_addr_high = self.read_ram(pointer_addr.wrapping_add(1) as u16);
+        let final_addr = u16::from_le_bytes([final_addr_low, final_addr_high]);
+
+        let old_value = self.read_ram(final_addr);
+        let new_value = old_value & self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 6;
+    }
+
+    // 0x28
+    fn op_and_immediate(&mut self) {
+        let value = self.read_ram(self.pc);
+        self.pc += 1;
+        let new_value = self.a & value;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 2;
+    }
+
+    // 0x29
+    fn op_and_dp_dp(&mut self) {
+        let ds_offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let dd_offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let source_addr = base_addr + (ds_offset as u16);
+        let dest_addr = base_addr + (dd_offset as u16);
+
+        let old_value = self.read_ram(dest_addr);
+        let new_value = old_value & self.read_ram(source_addr);
+        self.write_ram(dest_addr, new_value);
+        
+        self.update_nz(new_value);
+        self.cycles += 6;
     }
 
     // 0x30
@@ -672,10 +831,219 @@ impl SPCProcessor {
         }
     }
 
+    // 0x34
+    fn op_and_x_indexed_direct(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = self.x.wrapping_add(offset as u8) as u16 + base_addr;
+        let old_value = self.read_ram(addr as u16);
+        let new_value = old_value & self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 4;
+    }
+
+    // 0x35
+    fn op_and_x_indexed_absolute(&mut self) {
+        let low_addr = self.read_ram(self.pc);
+        self.pc += 1;
+        let high_addr = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = u16::from_le_bytes([low_addr, high_addr]);
+
+        let addr =base_addr.wrapping_add(self.x as u16);
+        let old_value = self.read_ram(addr);
+        let new_value = old_value & self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 5;
+    }
+
+    // 0x36
+    fn op_and_y_indexed_absolute(&mut self) {
+        let low_addr = self.read_ram(self.pc);
+        self.pc += 1;
+        let high_addr = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = u16::from_le_bytes([low_addr, high_addr]);
+
+        let addr =base_addr.wrapping_add(self.y as u16);
+        let old_value = self.read_ram(addr);
+        let new_value = old_value & self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 5;
+    }
+
+    // 0x37
+    fn op_and_indirect_y_indexed(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let pointer_addr = offset as u16;
+        let base_addr_low = self.read_ram(pointer_addr);
+        let base_addr_high = self.read_ram(pointer_addr.wrapping_add(1));
+        let base_addr = u16::from_le_bytes([base_addr_low, base_addr_high]);
+        let final_addr = base_addr.wrapping_add(self.y as u16);
+
+        let old_value = self.read_ram(final_addr);
+        let new_value = old_value & self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 6;
+    }
+
+    // 0x38
+    fn op_and_immediate_to_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let to_or = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = base_addr + offset as u16;
+        let old_value = self.read_ram(addr);
+        let value = old_value & to_or;
+        self.write_ram(addr, value);
+        
+        self.update_nz(value);
+        self.cycles += 5;
+    }
+
+    // 0x39
+    fn op_and_indirect_to_indirect(&mut self) {
+        let first_value = self.read_ram(self.x as u16);
+        let second_value = self.read_ram(self.y as u16);
+
+        let new_value = first_value & second_value;
+        self.write_ram(self.x as u16, new_value);
+
+        self.update_nz(new_value);
+        self.cycles += 5; 
+    }
+
     // 0x40
     fn op_setp(&mut self) {
         self.set_flag(PSWFlags::DirectPage);
         self.cycles += 2;
+    }
+
+    // 0x44
+    fn op_eor_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100 + offset as u16
+        } else {
+            0x0000 + offset as u16
+        };
+        
+        let old_value = self.read_ram(addr);
+        let new_value = old_value ^ self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+
+        self.cycles += 3;
+    }
+
+    // 0x45
+    fn op_eor_absolute(&mut self) {
+        let addr_low = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr_high = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = u16::from_le_bytes([addr_low, addr_high]);
+
+        let old_value = self.read_ram(addr);
+        let new_value = old_value ^ self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 4;
+    }
+
+    // 0x46
+    fn op_eor_indirect(&mut self) {
+        let addr = self.x as u16;
+
+        let old_value = self.read_ram(addr);
+        let new_value = old_value ^ self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 3;
+    }
+
+    // 0x47
+    fn op_eor_x_indexed_indirect(&mut self) { 
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        // Dumb pointer logic zzzzzzzzzzzzzz
+        let pointer_addr = self.x.wrapping_add(offset);
+        let final_addr_low = self.read_ram(pointer_addr as u16);
+        let final_addr_high = self.read_ram(pointer_addr.wrapping_add(1) as u16);
+        let final_addr = u16::from_le_bytes([final_addr_low, final_addr_high]);
+
+        let old_value = self.read_ram(final_addr);
+        let new_value = old_value ^ self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 6;
+    }
+
+    // 0x48
+    fn op_eor_immediate(&mut self) {
+        let value = self.read_ram(self.pc);
+        self.pc += 1;
+        let new_value = self.a ^ value;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 2;
+    }
+
+    // 0x49
+    fn op_eor_dp_dp(&mut self) {
+        let ds_offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let dd_offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let source_addr = base_addr + (ds_offset as u16);
+        let dest_addr = base_addr + (dd_offset as u16);
+
+        let old_value = self.read_ram(dest_addr);
+        let new_value = old_value ^ self.read_ram(source_addr);
+        self.write_ram(dest_addr, new_value);
+        
+        self.update_nz(new_value);
+        self.cycles += 6;
     }
 
     // 0x50
@@ -694,10 +1062,221 @@ impl SPCProcessor {
         }
     }
 
+    // 0x54
+    fn op_eor_x_indexed_direct(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = self.x.wrapping_add(offset as u8) as u16 + base_addr;
+        let old_value = self.read_ram(addr as u16);
+        let new_value = old_value ^ self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 4;
+    }
+
+    // 0x55
+    fn op_eor_x_indexed_absolute(&mut self) {
+        let low_addr = self.read_ram(self.pc);
+        self.pc += 1;
+        let high_addr = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = u16::from_le_bytes([low_addr, high_addr]);
+
+        let addr =base_addr.wrapping_add(self.x as u16);
+        let old_value = self.read_ram(addr);
+        let new_value = old_value ^ self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 5;
+    }
+
+    // 0x56
+    fn op_eor_y_indexed_absolute(&mut self) {
+        let low_addr = self.read_ram(self.pc);
+        self.pc += 1;
+        let high_addr = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = u16::from_le_bytes([low_addr, high_addr]);
+
+        let addr =base_addr.wrapping_add(self.y as u16);
+        let old_value = self.read_ram(addr);
+        let new_value = old_value ^ self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 5;
+    }
+
+    // 0x57
+    fn op_eor_indirect_y_indexed(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let pointer_addr = offset as u16;
+        let base_addr_low = self.read_ram(pointer_addr);
+        let base_addr_high = self.read_ram(pointer_addr.wrapping_add(1));
+        let base_addr = u16::from_le_bytes([base_addr_low, base_addr_high]);
+        let final_addr = base_addr.wrapping_add(self.y as u16);
+
+        let old_value = self.read_ram(final_addr);
+        let new_value = old_value ^ self.a;
+        self.a = new_value;
+
+        self.update_nz(new_value);
+        self.cycles += 6;
+    }
+
+    // 0x58
+    fn op_eor_immediate_to_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let to_or = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = base_addr + offset as u16;
+        let old_value = self.read_ram(addr);
+        let value = old_value ^ to_or;
+        self.write_ram(addr, value);
+        
+        self.update_nz(value);
+        self.cycles += 5;
+    }
+
+    // 0x59
+    fn op_eor_indirect_to_indirect(&mut self) {
+        let first_value = self.read_ram(self.x as u16);
+        let second_value = self.read_ram(self.y as u16);
+
+        let new_value = first_value ^ second_value;
+        self.write_ram(self.x as u16, new_value);
+
+        self.update_nz(new_value);
+        self.cycles += 5; 
+    }
+
     // 0x60
     fn op_clrc(&mut self) {
         self.clear_flag(PSWFlags::Carry);
         self.cycles += 2;
+    }
+
+    // 0x64
+    fn op_cmp_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100 + offset as u16
+        } else {
+            0x0000 + offset as u16
+        };
+        
+        let old_value = self.read_ram(addr);
+        let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
+
+        // Update nz flags
+        self.update_nz(check_value);
+        // Update carry flag
+        self.update_carry(did_borrow);
+
+        self.cycles += 3;
+    }
+
+    // 0x65
+    fn op_cmp_absolute(&mut self) {
+        let addr_low = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr_high = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = u16::from_le_bytes([addr_low, addr_high]);
+
+        let old_value = self.read_ram(addr);
+        let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
+
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 4;
+    }
+
+    // 0x66
+    fn op_cmp_indirect(&mut self) {
+        let addr = self.x as u16;
+
+        let old_value = self.read_ram(addr);
+        let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
+
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 3;
+    }
+
+    // 0x67
+    fn op_cmp_x_indexed_indirect(&mut self) { 
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        // Dumb pointer logic zzzzzzzzzzzzzz
+        let pointer_addr = self.x.wrapping_add(offset);
+        let final_addr_low = self.read_ram(pointer_addr as u16);
+        let final_addr_high = self.read_ram(pointer_addr.wrapping_add(1) as u16);
+        let final_addr = u16::from_le_bytes([final_addr_low, final_addr_high]);
+
+        let old_value = self.read_ram(final_addr);
+        let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
+
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 6;
+    }
+
+    // 0x68
+    fn op_cmp_immediate(&mut self) {
+        let value = self.read_ram(self.pc);
+        self.pc += 1;
+        let (check_value, did_borrow) = self.a.overflowing_sub(value);
+
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 2;
+    }
+
+    // 0x69
+    fn op_cmp_dp_dp(&mut self) {
+        let ds_offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let dd_offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let source_addr = base_addr + (ds_offset as u16);
+        let dest_addr = base_addr + (dd_offset as u16);
+
+        let old_value = self.read_ram(dest_addr);
+        let (check_value, did_borrow) = old_value.overflowing_sub(self.read_ram(source_addr));
+        
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 6;
     }
 
     // 0x70
@@ -716,11 +1295,289 @@ impl SPCProcessor {
         }
     }
 
+    // 0x74
+    fn op_cmp_x_indexed_direct(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = self.x.wrapping_add(offset as u8) as u16 + base_addr;
+        let old_value = self.read_ram(addr as u16);
+        let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
+
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 4;
+    }
+
+    // 0x75
+    fn op_cmp_x_indexed_absolute(&mut self) {
+        let low_addr = self.read_ram(self.pc);
+        self.pc += 1;
+        let high_addr = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = u16::from_le_bytes([low_addr, high_addr]);
+
+        let addr =base_addr.wrapping_add(self.x as u16);
+        let old_value = self.read_ram(addr);
+        let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
+
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 5;
+    }
+
+    // 0x76
+    fn op_cmp_y_indexed_absolute(&mut self) {
+        let low_addr = self.read_ram(self.pc);
+        self.pc += 1;
+        let high_addr = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = u16::from_le_bytes([low_addr, high_addr]);
+
+        let addr =base_addr.wrapping_add(self.y as u16);
+        let old_value = self.read_ram(addr);
+        let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
+
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 5;
+    }
+
+    // 0x77
+    fn op_cmp_indirect_y_indexed(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let pointer_addr = offset as u16;
+        let base_addr_low = self.read_ram(pointer_addr);
+        let base_addr_high = self.read_ram(pointer_addr.wrapping_add(1));
+        let base_addr = u16::from_le_bytes([base_addr_low, base_addr_high]);
+        let final_addr = base_addr.wrapping_add(self.y as u16);
+
+        let old_value = self.read_ram(final_addr);
+        let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
+
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 6;
+    }
+
+    // 0x78
+    fn op_cmp_immediate_to_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let to_or = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = base_addr + offset as u16;
+        let old_value = self.read_ram(addr);
+        let (check_value, did_borrow) = old_value.overflowing_sub(to_or);
+        
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 5;
+    }
+
+    // 0x79
+    fn op_cmp_indirect_to_indirect(&mut self) {
+        let first_value = self.read_ram(self.x as u16);
+        let second_value = self.read_ram(self.y as u16);
+
+        let (check_value, did_borrow) = first_value.overflowing_sub(second_value);
+
+        self.update_nz(check_value);
+        self.update_carry(did_borrow);
+        self.cycles += 5; 
+    }
+
     // 0x80
     fn op_setc(&mut self) {
         self.set_flag(PSWFlags::Carry);
         self.cycles += 2;
     }
+
+    // 0x84
+    fn op_adc_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100 + offset as u16
+        } else {
+            0x0000 + offset as u16
+        };
+
+        let a_val = self.a as u16;
+        let d_val = self.read_ram(addr) as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+
+        let full_result = a_val + d_val + c_val;
+        let full_result_u8 = full_result as u8;
+        self.a = full_result_u8;
+
+        self.update_nz(full_result_u8);
+        self.update_carry(full_result <= 0xFF);
+
+        // Set Half-carry
+        self.update_half_carry((a_val & 0x0F) + (d_val & 0x0F) + c_val > 0x0F);
+
+        // Set Overflow flag..
+        self.update_overflow(((a_val ^ full_result) & (d_val ^ full_result)) & 0b1000_0000 != 0);
+
+        self.cycles += 3;
+    }
+
+    //0x85
+    fn op_adc_absolute(&mut self) {
+        let addr_low = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr_high = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = u16::from_le_bytes([addr_low, addr_high]);
+
+        let a_val = self.a as u16;
+        let absolute_val = self.read_ram(addr) as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+
+        let full_result = a_val + absolute_val + c_val;
+        let full_result_u8 = full_result as u8;
+        self.a = full_result_u8;
+
+        self.update_nz(full_result_u8);
+        self.update_carry(full_result <= 0xFF);
+
+        // Set Half-carry
+        self.update_half_carry((a_val & 0x0F) + (absolute_val & 0x0F) + c_val > 0x0F);
+
+        // Set Overflow flag..
+        self.update_overflow(((a_val ^ full_result) & (absolute_val ^ full_result)) & 0b1000_0000 != 0);
+
+        self.cycles += 4;
+    }
+
+    // 0x86
+    fn op_adc_indirect(&mut self) {
+        let addr = self.x as u16;
+
+        let old_value = self.read_ram(addr);
+        let a_val = self.a as u16;
+        let indirect_val = old_value as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+
+        let full_result = a_val + indirect_val + c_val;
+        let full_result_u8 = full_result as u8;
+        self.a = full_result_u8;
+
+        self.update_nz(full_result_u8);
+        self.update_carry(full_result <= 0xFF);
+
+        // Set Half-carry
+        self.update_half_carry((a_val & 0x0F) + (indirect_val & 0x0F) + c_val > 0x0F);
+
+        // Set Overflow flag..
+        self.update_overflow(((a_val ^ full_result) & (indirect_val ^ full_result)) & 0b1000_0000 != 0);
+        self.cycles += 3;
+    }
+
+    // 0x87
+    fn op_adc_x_indexed_indirect(&mut self) { 
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        // Dumb pointer logic zzzzzzzzzzzzzz
+        let pointer_addr = self.x.wrapping_add(offset);
+        let final_addr_low = self.read_ram(pointer_addr as u16);
+        let final_addr_high = self.read_ram(pointer_addr.wrapping_add(1) as u16);
+        let final_addr = u16::from_le_bytes([final_addr_low, final_addr_high]);
+
+        let a_val = self.a as u16;
+        let indirect_val = self.read_ram(final_addr) as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+
+        let full_result = a_val + indirect_val + c_val;
+        let full_result_u8 = full_result as u8;
+        self.a = full_result_u8;
+
+        self.update_nz(full_result_u8);
+        self.update_carry(full_result <= 0xFF);
+
+        // Set Half-carry
+        self.update_half_carry((a_val & 0x0F) + (indirect_val & 0x0F) + c_val > 0x0F);
+
+        // Set Overflow flag..
+        self.update_overflow(((a_val ^ full_result) & (indirect_val ^ full_result)) & 0b1000_0000 != 0);
+
+        self.cycles += 6;
+    }
+
+    // 0x88
+    fn op_adc_immediate(&mut self) {
+        let value = self.read_ram(self.pc);
+        self.pc += 1;
+        
+        let a_val = self.a as u16;
+        let immediate_val = value as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+
+        let full_result = a_val + immediate_val + c_val;
+        let full_result_u8 = full_result as u8;
+        self.a = full_result_u8;
+
+        self.update_nz(full_result_u8);
+        self.update_carry(full_result <= 0xFF);
+
+        // Set Half-carry
+        self.update_half_carry((a_val & 0x0F) + (immediate_val & 0x0F) + c_val > 0x0F);
+
+        // Set Overflow flag..
+        self.update_overflow(((a_val ^ full_result) & (immediate_val ^ full_result)) & 0b1000_0000 != 0);
+        self.cycles += 2;
+    }
+
+    // 0x89
+    fn op_abc_dp_dp(&mut self) {
+        let ds_offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let dd_offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let source_addr = base_addr + (ds_offset as u16);
+        let dest_addr = base_addr + (dd_offset as u16);
+
+        let dest_value = self.read_ram(dest_addr) as u16;
+        let source_value = self.read_ram(source_addr) as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+
+        let new_value = dest_value + source_value + c_val;
+        let new_value_u8 = new_value as u8;
+        self.write_ram(dest_addr, new_value_u8);
+        
+        self.update_nz(new_value_u8);
+        self.update_carry(new_value <= 0xFF);
+        self.update_half_carry((dest_value & 0x0F) + (source_value & 0x0F) + c_val > 0x0F);
+        self.update_overflow(((dest_value ^ new_value) & (source_value ^ new_value)) & 0b1000_0000 != 0);
+
+        self.cycles += 6;
+    }
+
 
     // 0x90
     fn op_bcc_relative(&mut self) {
@@ -737,6 +1594,143 @@ impl SPCProcessor {
             self.cycles += 2;
         }
     }
+
+    // 0x94
+    fn op_adc_x_indexed_direct(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr: u16 = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let effective_offset = offset.wrapping_add(self.x);
+        let final_addr = base_addr + (effective_offset as u16);
+        let offset_val = self.read_ram(final_addr) as u16;
+        let a_val = self.a as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+
+        let full_result = a_val + offset_val + c_val;
+        let full_result_u8 = full_result as u8;
+        self.a = full_result_u8;
+
+        self.update_nz(full_result_u8);
+        self.update_carry(full_result <= 0xFF);
+        self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
+        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+        self.cycles += 4;
+    }
+
+    // 0x95
+    fn op_adc_x_indexed_absolute(&mut self) {
+        let low_addr = self.read_ram(self.pc);
+        self.pc += 1;
+        let high_addr = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = u16::from_le_bytes([low_addr, high_addr]);
+        let final_addr = base_addr.wrapping_add(self.x as u16);
+
+        let offset_val = self.read_ram(final_addr) as u16;
+        let a_val = self.a as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+
+        let full_result = a_val + offset_val + c_val;
+        let full_result_u8 = full_result as u8;
+        self.a = full_result_u8;
+
+        self.update_nz(full_result_u8);
+        self.update_carry(full_result <= 0xFF);
+        self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
+        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+        self.cycles += 5;
+    }
+
+    // 0x96
+    fn op_adc_y_indexed_absolute(&mut self) {
+        let low_addr = self.read_ram(self.pc);
+        self.pc += 1;
+        let high_addr = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = u16::from_le_bytes([low_addr, high_addr]);
+
+        let addr = base_addr.wrapping_add(self.y as u16);
+        let offset_val = self.read_ram(addr) as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+        let a_val = self.a as u16;
+        
+        let full_result = a_val + offset_val + c_val;
+        let new_value = full_result as u8;
+        self.a = new_value;
+
+        self.update_carry(full_result <= 0xFF);
+        self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
+        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+
+        self.update_nz(new_value);
+        self.cycles += 5;
+    }
+
+    // 0x97
+    fn op_adc_indirect_y_indexed(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let pointer_addr = offset as u16;
+        let base_addr_low = self.read_ram(pointer_addr);
+        let base_addr_high = self.read_ram(pointer_addr.wrapping_add(1));
+        let base_addr = u16::from_le_bytes([base_addr_low, base_addr_high]);
+        let final_addr = base_addr.wrapping_add(self.y as u16);
+
+        let offset_val = self.read_ram(final_addr) as u16;
+        let a_val = self.a as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+
+        let full_result = a_val + offset_val + c_val;
+        let new_value = full_result as u8;
+        self.a = new_value;
+
+        self.update_carry(full_result <= 0xFF);
+        self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
+        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+
+        self.update_nz(new_value);
+        self.cycles += 6;
+    }
+
+    // 0x98
+    fn op_adc_immediate_to_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let to_or = self.read_ram(self.pc);
+        self.pc += 1;
+
+        let base_addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100
+        } else {
+            0x0000
+        };
+
+        let addr = base_addr + offset as u16;
+        let offset_val = self.read_ram(addr) as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+        let to_or_val = to_or as u16;
+
+        let full_result = offset_val + to_or_val + c_val;
+        let value = full_result as u8;
+        self.write_ram(addr, value);
+
+        self.update_nz(value);
+        self.update_carry(full_result <= 0xFF);
+        self.update_half_carry((offset_val & 0x0F) + (to_or_val & 0x0F) + c_val > 0x0F);
+        self.update_overflow(((offset_val ^ full_result) & (to_or_val ^ full_result)) & 0b1000_0000 != 0);
+        
+        self.cycles += 5;
+    }
+
+    // 0x99
 
     // 0xA0
     fn op_ei(&mut self) {
