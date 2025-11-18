@@ -1731,6 +1731,27 @@ impl SPCProcessor {
     }
 
     // 0x99
+    fn op_adc_indirect_to_indirect(&mut self) {
+        let first_value = self.read_ram(self.x as u16);
+        let second_value = self.read_ram(self.y as u16);
+
+        // let new_value = first_value | second_value;
+        // self.write_ram(self.x as u16, new_value);
+        let f_val = first_value as u16;
+        let s_val = second_value as u16;
+        let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
+
+        let full_result = f_val + s_val + c_val;
+        let new_value = full_result as u8;
+        self.write_ram(self.x as u16, new_value);
+
+        self.update_nz(new_value);
+        self.update_carry(full_result <= 0xFF);
+        self.update_half_carry((f_val & 0x0F) + (s_val & 0x0F) + c_val > 0x0F);
+        self.update_overflow(((f_val ^ full_result) & (s_val ^ full_result)) & 0b1000_0000 != 0);
+        
+        self.cycles += 5; 
+    }
 
     // 0xA0
     fn op_ei(&mut self) {
