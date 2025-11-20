@@ -4,3 +4,4 @@ sample/*.spc
 sample/*.zip
 sample/*.txt
 .vscode/
+.DS_Store
