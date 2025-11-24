@@ -56,11 +56,11 @@ impl SPCProcessor {
             0x08 => self.op_or_immediate(),
             0x09 => self.op_or_dp_dp(), // TODO: Make sure this works properly..
             0x0A => self.op_or1_absolute_boolean_bit(),
-            0x0B => {}
-            0x0C => {}
-            0x0D => {}
-            0x0E => {}
-            0x0F => {}
+            0x0B => self.op_asl_direct_page(),
+            0x0C => self.op_asl_absolute(),
+            0x0D => self.op_push_psw(),
+            0x0E => self.op_tset1_absolute(),
+            0x0F => self.op_brk(),
             0x10 => self.op_bpl_relative(),
             0x11 => self.op_tcall(0xFFDC),
             0x12 => self.op_clr1(0),
@@ -71,7 +71,7 @@ impl SPCProcessor {
             0x17 => self.op_or_indirect_y_indexed(),
             0x18 => self.op_or_immediate_to_direct_page(),
             0x19 => self.op_or_indirect_to_indirect(),
-            0x1A => {}
+            0x1A => self.op_decw_direct_page(),
             0x1B => {}
             0x1C => {}
             0x1D => {}
@@ -444,7 +444,7 @@ impl SPCProcessor {
         } else {
             0x0000 + offset as u16
         };
-        
+
         let old_value = self.read_ram(addr);
         let new_value = old_value | self.a;
         self.a = new_value;
@@ -483,7 +483,7 @@ impl SPCProcessor {
     }
 
     // 0x07
-    fn op_or_x_indexed_indirect(&mut self) { 
+    fn op_or_x_indexed_indirect(&mut self) {
         let offset = self.read_ram(self.pc);
         self.pc += 1;
 
@@ -531,7 +531,7 @@ impl SPCProcessor {
         let old_value = self.read_ram(dest_addr);
         let new_value = old_value | self.read_ram(source_addr);
         self.write_ram(dest_addr, new_value);
-        
+
         self.update_nz(new_value);
         self.cycles += 6;
     }
@@ -559,14 +559,91 @@ impl SPCProcessor {
     }
 
     // 0x0B
+    fn op_asl_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100 + offset as u16
+        } else {
+            0x0000 + offset as u16
+        };
+
+        let old_value = self.read_ram(addr);
+        let new_value = old_value << 1;
+        self.write_ram(addr, new_value);
+
+        self.update_nz(new_value);
+
+        if old_value & 0b1000_0000 != 0 {
+            self.set_flag(PSWFlags::Carry);
+        } else {
+            self.clear_flag(PSWFlags::Carry);
+        }
+
+        self.cycles += 4;
+    }
 
     // 0x0C
+    fn op_asl_absolute(&mut self) {
+        let addr_low = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr_high = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = u16::from_le_bytes([addr_low, addr_high]);
+
+        let old_value = self.read_ram(addr);
+        let new_value = old_value << 1;
+        self.write_ram(addr, new_value);
+
+        self.update_nz(new_value);
+
+        if old_value & 0b1000_0000 != 0 {
+            self.set_flag(PSWFlags::Carry);
+        } else {
+            self.clear_flag(PSWFlags::Carry);
+        }
+
+        self.cycles += 5;
+    }
 
     // 0x0D
+    fn op_push_psw(&mut self) {
+        self.write_stack(self.psw);
+        self.cycles += 4;
+    }
 
     // 0x0E
+    fn op_tset1_absolute(&mut self) {
+        let addr_low = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr_high = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = u16::from_le_bytes([addr_low, addr_high]);
+
+        let value = self.read_ram(addr);
+        let (result, _) = self.a.overflowing_sub(value);
+
+        let real_result = self.a | value;
+        self.write_ram(addr, real_result);
+
+        self.update_nz(result);
+
+        self.cycles += 6;
+    }
 
     // 0x0F
+    fn op_brk(&mut self) {
+        self.set_flag(PSWFlags::Break);
+        self.clear_flag(PSWFlags::InterruptEnabled);
+        let [pc_low, pc_high] = self.pc.to_le_bytes();
+        self.write_stack(pc_high);
+        self.write_stack(pc_low);
+        self.write_stack(self.psw);
+        let addr_low = self.read_ram(0xFFDE);
+        let addr_high = self.read_ram(0xFFDF);
+        self.pc = u16::from_le_bytes([addr_low, addr_high]);
+        self.cycles += 8;
+    }
 
     // 0x10
     fn op_bpl_relative(&mut self) {
@@ -661,7 +738,7 @@ impl SPCProcessor {
 
         let base_addr = u16::from_le_bytes([low_addr, high_addr]);
 
-        let addr =base_addr.wrapping_add(self.x as u16);
+        let addr = base_addr.wrapping_add(self.x as u16);
         let old_value = self.read_ram(addr);
         let new_value = old_value | self.a;
         self.a = new_value;
@@ -679,7 +756,7 @@ impl SPCProcessor {
 
         let base_addr = u16::from_le_bytes([low_addr, high_addr]);
 
-        let addr =base_addr.wrapping_add(self.y as u16);
+        let addr = base_addr.wrapping_add(self.y as u16);
         let old_value = self.read_ram(addr);
         let new_value = old_value | self.a;
         self.a = new_value;
@@ -723,7 +800,7 @@ impl SPCProcessor {
         let old_value = self.read_ram(addr);
         let value = old_value | to_or;
         self.write_ram(addr, value);
-        
+
         self.update_nz(value);
         self.cycles += 5;
     }
@@ -737,8 +814,55 @@ impl SPCProcessor {
         self.write_ram(self.x as u16, new_value);
 
         self.update_nz(new_value);
-        self.cycles += 5; 
+        self.cycles += 5;
     }
+
+    // 0x1A
+    fn op_decw_direct_page(&mut self) {
+        let offset = self.read_ram(self.pc);
+        self.pc += 1;
+        let addr = if self.flag_set(PSWFlags::DirectPage) {
+            0x0100 + offset as u16
+        } else {
+            0x0000 + offset as u16
+        };
+
+        let word_low = self.read_ram(addr);
+        let word_high = self.read_ram(addr.wrapping_add(1));
+        let word = u16::from_le_bytes([word_low, word_high]);
+
+        let new_value = word.wrapping_sub(1);
+        self.write_ram(addr, new_value as u8);
+        self.write_ram(addr.wrapping_add(1), (new_value >> 8) as u8);
+
+        if new_value == 0x0000 {
+            self.set_flag(PSWFlags::Zero);
+        } else {
+            self.clear_flag(PSWFlags::Zero);
+        }
+
+        // 2. Check N flag (set if 15th bit is 1, 0x8000)
+        if new_value & 0x8000 != 0 {
+            self.set_flag(PSWFlags::Negative);
+        } else {
+            self.clear_flag(PSWFlags::Negative);
+        }
+
+        self.cycles += 6;
+    }
+
+    // 0x1B
+    fn op_asl_x_indexed_direct_page(&mut self) {
+
+    }
+
+    // 0x1C
+
+    // 0x1D
+
+    // 0x1E
+
+    // 0x1F
 
     // 0x20
     fn op_clrp(&mut self) {
@@ -755,7 +879,7 @@ impl SPCProcessor {
         } else {
             0x0000 + offset as u16
         };
-        
+
         let old_value = self.read_ram(addr);
         let new_value = old_value & self.a;
         self.a = new_value;
@@ -794,7 +918,7 @@ impl SPCProcessor {
     }
 
     // 0x27
-    fn op_and_x_indexed_indirect(&mut self) { 
+    fn op_and_x_indexed_indirect(&mut self) {
         let offset = self.read_ram(self.pc);
         self.pc += 1;
 
@@ -842,7 +966,7 @@ impl SPCProcessor {
         let old_value = self.read_ram(dest_addr);
         let new_value = old_value & self.read_ram(source_addr);
         self.write_ram(dest_addr, new_value);
-        
+
         self.update_nz(new_value);
         self.cycles += 6;
     }
@@ -892,7 +1016,7 @@ impl SPCProcessor {
 
         let base_addr = u16::from_le_bytes([low_addr, high_addr]);
 
-        let addr =base_addr.wrapping_add(self.x as u16);
+        let addr = base_addr.wrapping_add(self.x as u16);
         let old_value = self.read_ram(addr);
         let new_value = old_value & self.a;
         self.a = new_value;
@@ -910,7 +1034,7 @@ impl SPCProcessor {
 
         let base_addr = u16::from_le_bytes([low_addr, high_addr]);
 
-        let addr =base_addr.wrapping_add(self.y as u16);
+        let addr = base_addr.wrapping_add(self.y as u16);
         let old_value = self.read_ram(addr);
         let new_value = old_value & self.a;
         self.a = new_value;
@@ -954,7 +1078,7 @@ impl SPCProcessor {
         let old_value = self.read_ram(addr);
         let value = old_value & to_or;
         self.write_ram(addr, value);
-        
+
         self.update_nz(value);
         self.cycles += 5;
     }
@@ -968,7 +1092,7 @@ impl SPCProcessor {
         self.write_ram(self.x as u16, new_value);
 
         self.update_nz(new_value);
-        self.cycles += 5; 
+        self.cycles += 5;
     }
 
     // 0x40
@@ -986,7 +1110,7 @@ impl SPCProcessor {
         } else {
             0x0000 + offset as u16
         };
-        
+
         let old_value = self.read_ram(addr);
         let new_value = old_value ^ self.a;
         self.a = new_value;
@@ -1025,7 +1149,7 @@ impl SPCProcessor {
     }
 
     // 0x47
-    fn op_eor_x_indexed_indirect(&mut self) { 
+    fn op_eor_x_indexed_indirect(&mut self) {
         let offset = self.read_ram(self.pc);
         self.pc += 1;
 
@@ -1073,7 +1197,7 @@ impl SPCProcessor {
         let old_value = self.read_ram(dest_addr);
         let new_value = old_value ^ self.read_ram(source_addr);
         self.write_ram(dest_addr, new_value);
-        
+
         self.update_nz(new_value);
         self.cycles += 6;
     }
@@ -1123,7 +1247,7 @@ impl SPCProcessor {
 
         let base_addr = u16::from_le_bytes([low_addr, high_addr]);
 
-        let addr =base_addr.wrapping_add(self.x as u16);
+        let addr = base_addr.wrapping_add(self.x as u16);
         let old_value = self.read_ram(addr);
         let new_value = old_value ^ self.a;
         self.a = new_value;
@@ -1141,7 +1265,7 @@ impl SPCProcessor {
 
         let base_addr = u16::from_le_bytes([low_addr, high_addr]);
 
-        let addr =base_addr.wrapping_add(self.y as u16);
+        let addr = base_addr.wrapping_add(self.y as u16);
         let old_value = self.read_ram(addr);
         let new_value = old_value ^ self.a;
         self.a = new_value;
@@ -1185,7 +1309,7 @@ impl SPCProcessor {
         let old_value = self.read_ram(addr);
         let value = old_value ^ to_or;
         self.write_ram(addr, value);
-        
+
         self.update_nz(value);
         self.cycles += 5;
     }
@@ -1199,7 +1323,7 @@ impl SPCProcessor {
         self.write_ram(self.x as u16, new_value);
 
         self.update_nz(new_value);
-        self.cycles += 5; 
+        self.cycles += 5;
     }
 
     // 0x60
@@ -1217,7 +1341,7 @@ impl SPCProcessor {
         } else {
             0x0000 + offset as u16
         };
-        
+
         let old_value = self.read_ram(addr);
         let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
 
@@ -1258,7 +1382,7 @@ impl SPCProcessor {
     }
 
     // 0x67
-    fn op_cmp_x_indexed_indirect(&mut self) { 
+    fn op_cmp_x_indexed_indirect(&mut self) {
         let offset = self.read_ram(self.pc);
         self.pc += 1;
 
@@ -1305,7 +1429,7 @@ impl SPCProcessor {
 
         let old_value = self.read_ram(dest_addr);
         let (check_value, did_borrow) = old_value.overflowing_sub(self.read_ram(source_addr));
-        
+
         self.update_nz(check_value);
         self.update_carry(did_borrow);
         self.cycles += 6;
@@ -1356,7 +1480,7 @@ impl SPCProcessor {
 
         let base_addr = u16::from_le_bytes([low_addr, high_addr]);
 
-        let addr =base_addr.wrapping_add(self.x as u16);
+        let addr = base_addr.wrapping_add(self.x as u16);
         let old_value = self.read_ram(addr);
         let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
 
@@ -1374,7 +1498,7 @@ impl SPCProcessor {
 
         let base_addr = u16::from_le_bytes([low_addr, high_addr]);
 
-        let addr =base_addr.wrapping_add(self.y as u16);
+        let addr = base_addr.wrapping_add(self.y as u16);
         let old_value = self.read_ram(addr);
         let (check_value, did_borrow) = self.a.overflowing_sub(old_value);
 
@@ -1417,7 +1541,7 @@ impl SPCProcessor {
         let addr = base_addr + offset as u16;
         let old_value = self.read_ram(addr);
         let (check_value, did_borrow) = old_value.overflowing_sub(to_or);
-        
+
         self.update_nz(check_value);
         self.update_carry(did_borrow);
         self.cycles += 5;
@@ -1432,7 +1556,7 @@ impl SPCProcessor {
 
         self.update_nz(check_value);
         self.update_carry(did_borrow);
-        self.cycles += 5; 
+        self.cycles += 5;
     }
 
     // 0x80
@@ -1494,7 +1618,9 @@ impl SPCProcessor {
         self.update_half_carry((a_val & 0x0F) + (absolute_val & 0x0F) + c_val > 0x0F);
 
         // Set Overflow flag..
-        self.update_overflow(((a_val ^ full_result) & (absolute_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (absolute_val ^ full_result)) & 0b1000_0000 != 0,
+        );
 
         self.cycles += 4;
     }
@@ -1519,12 +1645,14 @@ impl SPCProcessor {
         self.update_half_carry((a_val & 0x0F) + (indirect_val & 0x0F) + c_val > 0x0F);
 
         // Set Overflow flag..
-        self.update_overflow(((a_val ^ full_result) & (indirect_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (indirect_val ^ full_result)) & 0b1000_0000 != 0,
+        );
         self.cycles += 3;
     }
 
     // 0x87
-    fn op_adc_x_indexed_indirect(&mut self) { 
+    fn op_adc_x_indexed_indirect(&mut self) {
         let offset = self.read_ram(self.pc);
         self.pc += 1;
 
@@ -1549,7 +1677,9 @@ impl SPCProcessor {
         self.update_half_carry((a_val & 0x0F) + (indirect_val & 0x0F) + c_val > 0x0F);
 
         // Set Overflow flag..
-        self.update_overflow(((a_val ^ full_result) & (indirect_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (indirect_val ^ full_result)) & 0b1000_0000 != 0,
+        );
 
         self.cycles += 6;
     }
@@ -1558,7 +1688,7 @@ impl SPCProcessor {
     fn op_adc_immediate(&mut self) {
         let value = self.read_ram(self.pc);
         self.pc += 1;
-        
+
         let a_val = self.a as u16;
         let immediate_val = value as u16;
         let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
@@ -1574,7 +1704,9 @@ impl SPCProcessor {
         self.update_half_carry((a_val & 0x0F) + (immediate_val & 0x0F) + c_val > 0x0F);
 
         // Set Overflow flag..
-        self.update_overflow(((a_val ^ full_result) & (immediate_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (immediate_val ^ full_result)) & 0b1000_0000 != 0,
+        );
         self.cycles += 2;
     }
 
@@ -1601,15 +1733,16 @@ impl SPCProcessor {
         let new_value = dest_value + source_value + c_val;
         let new_value_u8 = new_value as u8;
         self.write_ram(dest_addr, new_value_u8);
-        
+
         self.update_nz(new_value_u8);
         self.update_carry(new_value <= 0xFF);
         self.update_half_carry((dest_value & 0x0F) + (source_value & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((dest_value ^ new_value) & (source_value ^ new_value)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((dest_value ^ new_value) & (source_value ^ new_value)) & 0b1000_0000 != 0,
+        );
 
         self.cycles += 6;
     }
-
 
     // 0x90
     fn op_bcc_relative(&mut self) {
@@ -1651,7 +1784,9 @@ impl SPCProcessor {
         self.update_nz(full_result_u8);
         self.update_carry(full_result <= 0xFF);
         self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0,
+        );
         self.cycles += 4;
     }
 
@@ -1676,7 +1811,9 @@ impl SPCProcessor {
         self.update_nz(full_result_u8);
         self.update_carry(full_result <= 0xFF);
         self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0,
+        );
         self.cycles += 5;
     }
 
@@ -1693,14 +1830,16 @@ impl SPCProcessor {
         let offset_val = self.read_ram(addr) as u16;
         let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
         let a_val = self.a as u16;
-        
+
         let full_result = a_val + offset_val + c_val;
         let new_value = full_result as u8;
         self.a = new_value;
 
         self.update_carry(full_result <= 0xFF);
         self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0,
+        );
 
         self.update_nz(new_value);
         self.cycles += 5;
@@ -1726,7 +1865,9 @@ impl SPCProcessor {
 
         self.update_carry(full_result <= 0xFF);
         self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0,
+        );
 
         self.update_nz(new_value);
         self.cycles += 6;
@@ -1757,8 +1898,10 @@ impl SPCProcessor {
         self.update_nz(value);
         self.update_carry(full_result <= 0xFF);
         self.update_half_carry((offset_val & 0x0F) + (to_or_val & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((offset_val ^ full_result) & (to_or_val ^ full_result)) & 0b1000_0000 != 0);
-        
+        self.update_overflow(
+            ((offset_val ^ full_result) & (to_or_val ^ full_result)) & 0b1000_0000 != 0,
+        );
+
         self.cycles += 5;
     }
 
@@ -1782,7 +1925,7 @@ impl SPCProcessor {
         self.update_half_carry((f_val & 0x0F) + (s_val & 0x0F) + c_val > 0x0F);
         self.update_overflow(((f_val ^ full_result) & (s_val ^ full_result)) & 0b1000_0000 != 0);
 
-        self.cycles += 5; 
+        self.cycles += 5;
     }
 
     // 0xA0
@@ -1844,7 +1987,9 @@ impl SPCProcessor {
         self.update_half_carry((a_val & 0x0F) + (absolute_val & 0x0F) + c_val > 0x0F);
 
         // Set Overflow flag..
-        self.update_overflow(((a_val ^ full_result) & (absolute_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (absolute_val ^ full_result)) & 0b1000_0000 != 0,
+        );
 
         self.cycles += 4;
     }
@@ -1869,12 +2014,14 @@ impl SPCProcessor {
         self.update_half_carry((a_val & 0x0F) + (indirect_val & 0x0F) + c_val > 0x0F);
 
         // Set Overflow flag..
-        self.update_overflow(((a_val ^ full_result) & (indirect_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (indirect_val ^ full_result)) & 0b1000_0000 != 0,
+        );
         self.cycles += 3;
     }
 
     // 0xA7
-    fn op_sbc_x_indexed_indirect(&mut self) { 
+    fn op_sbc_x_indexed_indirect(&mut self) {
         let offset = self.read_ram(self.pc);
         self.pc += 1;
 
@@ -1899,7 +2046,9 @@ impl SPCProcessor {
         self.update_half_carry((a_val & 0x0F) + (indirect_val & 0x0F) + c_val > 0x0F);
 
         // Set Overflow flag..
-        self.update_overflow(((a_val ^ full_result) & (indirect_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (indirect_val ^ full_result)) & 0b1000_0000 != 0,
+        );
 
         self.cycles += 6;
     }
@@ -1908,7 +2057,7 @@ impl SPCProcessor {
     fn op_sbc_immediate(&mut self) {
         let value = self.read_ram(self.pc);
         self.pc += 1;
-        
+
         let a_val = self.a as u16;
         let immediate_val = (value ^ 0xFF) as u16;
         let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
@@ -1924,7 +2073,9 @@ impl SPCProcessor {
         self.update_half_carry((a_val & 0x0F) + (immediate_val & 0x0F) + c_val > 0x0F);
 
         // Set Overflow flag..
-        self.update_overflow(((a_val ^ full_result) & (immediate_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (immediate_val ^ full_result)) & 0b1000_0000 != 0,
+        );
         self.cycles += 2;
     }
 
@@ -1951,11 +2102,13 @@ impl SPCProcessor {
         let new_value = dest_value + source_value + c_val;
         let new_value_u8 = new_value as u8;
         self.write_ram(dest_addr, new_value_u8);
-        
+
         self.update_nz(new_value_u8);
         self.update_carry(new_value <= 0xFF);
         self.update_half_carry((dest_value & 0x0F) + (source_value & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((dest_value ^ new_value) & (source_value ^ new_value)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((dest_value ^ new_value) & (source_value ^ new_value)) & 0b1000_0000 != 0,
+        );
 
         self.cycles += 6;
     }
@@ -2000,7 +2153,9 @@ impl SPCProcessor {
         self.update_nz(full_result_u8);
         self.update_carry(full_result <= 0xFF);
         self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0,
+        );
         self.cycles += 4;
     }
 
@@ -2025,7 +2180,9 @@ impl SPCProcessor {
         self.update_nz(full_result_u8);
         self.update_carry(full_result <= 0xFF);
         self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0,
+        );
         self.cycles += 5;
     }
 
@@ -2042,19 +2199,21 @@ impl SPCProcessor {
         let offset_val = (self.read_ram(addr) ^ 0xFF) as u16;
         let c_val = if self.flag_set(PSWFlags::Carry) { 1 } else { 0 };
         let a_val = self.a as u16;
-        
+
         let full_result = a_val + offset_val + c_val;
         let new_value = full_result as u8;
         self.a = new_value;
 
         self.update_carry(full_result <= 0xFF);
         self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0,
+        );
 
         self.update_nz(new_value);
         self.cycles += 5;
     }
-    
+
     // 0xB7
     fn op_sbc_indirect_y_indexed(&mut self) {
         let offset = self.read_ram(self.pc);
@@ -2075,7 +2234,9 @@ impl SPCProcessor {
 
         self.update_carry(full_result <= 0xFF);
         self.update_half_carry((a_val & 0x0F) + (offset_val & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0);
+        self.update_overflow(
+            ((a_val ^ full_result) & (offset_val ^ full_result)) & 0b1000_0000 != 0,
+        );
 
         self.update_nz(new_value);
         self.cycles += 6;
@@ -2106,8 +2267,10 @@ impl SPCProcessor {
         self.update_nz(value);
         self.update_carry(full_result <= 0xFF);
         self.update_half_carry((offset_val & 0x0F) + (to_or_val & 0x0F) + c_val > 0x0F);
-        self.update_overflow(((offset_val ^ full_result) & (to_or_val ^ full_result)) & 0b1000_0000 != 0);
-        
+        self.update_overflow(
+            ((offset_val ^ full_result) & (to_or_val ^ full_result)) & 0b1000_0000 != 0,
+        );
+
         self.cycles += 5;
     }
 
@@ -2131,7 +2294,7 @@ impl SPCProcessor {
         self.update_half_carry((f_val & 0x0F) + (s_val & 0x0F) + c_val > 0x0F);
         self.update_overflow(((f_val ^ full_result) & (s_val ^ full_result)) & 0b1000_0000 != 0);
 
-        self.cycles += 5; 
+        self.cycles += 5;
     }
 
     // 0xC0
@@ -2141,7 +2304,7 @@ impl SPCProcessor {
     }
 
     // 0xC4
-    fn op_mov_direct_page(&mut self) { 
+    fn op_mov_direct_page(&mut self) {
         let offset = self.read_ram(self.pc);
         self.pc += 1;
 
@@ -2183,7 +2346,7 @@ impl SPCProcessor {
     }
 
     // 0xC7
-    fn op_mov_x_indexed_indirect(&mut self) { 
+    fn op_mov_x_indexed_indirect(&mut self) {
         let offset = self.read_ram(self.pc);
         self.pc += 1;
 
@@ -2282,7 +2445,7 @@ impl SPCProcessor {
 
         let base_addr = u16::from_le_bytes([low_addr, high_addr]);
 
-        let addr =base_addr.wrapping_add(self.y as u16);
+        let addr = base_addr.wrapping_add(self.y as u16);
         self.write_ram(addr, self.a);
 
         self.update_nz(self.a);
@@ -2356,7 +2519,7 @@ impl SPCProcessor {
         } else {
             0x0000 + offset as u16
         };
-        
+
         let new_value = self.read_ram(addr);
         self.a = new_value;
         self.update_nz(new_value);
@@ -2391,7 +2554,7 @@ impl SPCProcessor {
     }
 
     // 0xE7
-    fn op_mov2_x_indexed_indirect(&mut self) { 
+    fn op_mov2_x_indexed_indirect(&mut self) {
         let offset = self.read_ram(self.pc);
         self.pc += 1;
 
@@ -2412,7 +2575,7 @@ impl SPCProcessor {
     fn op_mov2_immediate(&mut self) {
         let value = self.read_ram(self.pc);
         self.pc += 1;
-        
+
         self.a = value;
 
         self.update_nz(value);
@@ -2495,7 +2658,7 @@ impl SPCProcessor {
 
         let base_addr = u16::from_le_bytes([low_addr, high_addr]);
 
-        let addr =base_addr.wrapping_add(self.y as u16);
+        let addr = base_addr.wrapping_add(self.y as u16);
         let new_value = self.read_ram(addr);
         self.a = new_value;
 
@@ -2556,5 +2719,4 @@ impl SPCProcessor {
         self.update_nz(new_value);
         self.cycles += 4;
     }
-
 }
